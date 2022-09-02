@@ -2,9 +2,14 @@ package main
 
 import (
 	"envholder/internal/cmd"
+	"fmt"
+	"os"
 )
 
 func main() {
 	root := cmd.NewCommandHandler()
-	root.Execute()
+	if err := root.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

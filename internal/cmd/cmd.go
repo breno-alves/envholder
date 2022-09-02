@@ -1,13 +1,15 @@
 package cmd
 
 import (
+	"envholder/internal/api"
+	"envholder/pkg/config"
 	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type CommandHandler struct {
 	root *cobra.Command
+	api  *api.Api
 }
 
 type Command interface {
@@ -16,40 +18,54 @@ type Command interface {
 }
 
 func NewCommandHandler() *CommandHandler {
-	viper.SetConfigFile(".env")
-	viper.ReadInConfig()
-	fmt.Println(viper.Get("user"))
 	cmdRoot := &CommandHandler{
 		root: &cobra.Command{},
+		api:  api.NewApi(),
 	}
+	cmdRoot.root.AddCommand(Login(cmdRoot))
+	cmdRoot.root.AddCommand(ListProjects(cmdRoot))
 
-	cmdRoot.root.AddCommand(Login())
 	return cmdRoot
 }
 
 func (ch *CommandHandler) Execute() error {
 	return ch.root.Execute()
 }
-
-func Hello() *cobra.Command {
+func ListProjects(cmdRoot *CommandHandler) *cobra.Command {
 	return &cobra.Command{
-		Use:   "hello [name]",
-		Short: "retorna Olá + name passado",
+		Use:   "project [option]",
+		Short: "",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Olá %s\n", args[0])
+			configData, err := config.ReadConfig()
+			if err != nil {
+				fmt.Println("missing config file")
+				panic(err)
+			}
+			
+			_, err = cmdRoot.api.ListProjects(configData.AccessToken)
+			if err != nil {
+				panic(err)
+			}
 		},
 	}
 }
 
-func Login() *cobra.Command {
+func Login(cmdRoot *CommandHandler) *cobra.Command {
 	return &cobra.Command{
 		Use:   "login [username] [password]",
 		Short: "",
-		//Args:  cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-
-			fmt.Printf("Login\n")
+			response, err := cmdRoot.api.Login(args[0], args[1])
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("Login successful")
+			err = config.WriteConfig(response.AccessToken)
+			if err != nil {
+				panic(err)
+			}
 		},
 	}
 }
