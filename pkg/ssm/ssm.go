@@ -6,12 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/breno-alves/envholder/pkg/transformers"
 )
-
-type OutputVarible struct {
-	Name  string
-	Value string
-}
 
 type SSM struct {
 	client *ssm.SSM
@@ -25,11 +21,11 @@ func NewSSM(path string) *SSM {
 	}
 }
 
-func (*SSM) ParseVariables(acc []*OutputVarible, output *ssm.GetParametersByPathOutput) ([]*OutputVarible, error) {
-	for _, p := range output.Parameters {
+func (*SSM) ParseVariables(acc []*transformers.OutputVarible, ot *ssm.GetParametersByPathOutput) ([]*transformers.OutputVarible, error) {
+	for _, p := range ot.Parameters {
 		pathArr := strings.Split(*p.Name, "/")
 		name := pathArr[len(pathArr)-1]
-		acc = append(acc, &OutputVarible{
+		acc = append(acc, &transformers.OutputVarible{
 			Name:  name,
 			Value: *p.Value,
 		})
@@ -37,7 +33,7 @@ func (*SSM) ParseVariables(acc []*OutputVarible, output *ssm.GetParametersByPath
 	return acc, nil
 }
 
-func (instance *SSM) ExportVariables(recursive bool) (acc []*OutputVarible, err error) {
+func (instance *SSM) ExportVariables(recursive bool) (acc []*transformers.OutputVarible, err error) {
 	input := &ssm.GetParametersByPathInput{
 		Path:           aws.String(instance.path),
 		WithDecryption: aws.Bool(true),

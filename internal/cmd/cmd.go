@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/breno-alves/envholder/pkg/ssm"
+	"github.com/breno-alves/envholder/pkg/transformers"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +18,7 @@ func NewCommandHandler() *CommandHandler {
 		root: &cobra.Command{},
 	}
 	cmdRoot.root.AddCommand(Export(cmdRoot))
+	cmdRoot.root.PersistentFlags().String("format", "dotenv", "Output format expected")
 
 	return cmdRoot
 }
@@ -29,10 +31,13 @@ func Export(cmdRoot *CommandHandler) *cobra.Command {
 	return &cobra.Command{
 		Use:   "export [exporter] [path]",
 		Short: "",
+		Long:  "",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			exporter := args[0]
 			path := args[1]
+			format, _ := cmd.Flags().GetString("format")
+			transformer := transformers.NewOutputer(format)
 
 			switch exporter {
 			case "ssm":
@@ -42,7 +47,8 @@ func Export(cmdRoot *CommandHandler) *cobra.Command {
 					log.Fatal(err)
 				}
 				for idx := range variables {
-					output := fmt.Sprintf("%s=%s\n", variables[idx].Name, variables[idx].Value)
+					variable := variables[idx]
+					output := transformer.Transform(variable)
 					fmt.Println(output)
 				}
 			}
