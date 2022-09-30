@@ -24,25 +24,45 @@ func NewApi() *Api {
 	}
 }
 
-func (api *Api) Request(method, url, token string, body map[string]interface{}) (*http.Response, error) {
-	bodyJson, err := json.Marshal(body)
+type RequestOptions struct {
+	method string
+	url    string
+	body   map[string]interface{}
+	token  string
+}
+
+func (api *Api) Request(reqOptions *RequestOptions) (*http.Response, error) {
+	var (
+		body   []byte = nil
+		method        = "GET"
+		url           = URL + reqOptions.url
+		token         = ""
+		err    error
+	)
+
+	if reqOptions.body != nil {
+		body, err = json.Marshal(reqOptions.body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if reqOptions.token != "" {
+		token = reqOptions.token
+	}
+
+	if reqOptions.method != "GET" {
+		method = reqOptions.method
+	}
+
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	if err != nil {
-		fmt.Errorf("failed to marshal body: %w", err)
+		fmt.Errorf("could not create request: %s\n", err)
 		return nil, err
 	}
-
-	if method == "GET" {
-		bodyJson = nil
-	}
-
-	req, err := http.NewRequest(method, URL+url, bytes.NewBuffer(bodyJson))
-	if err != nil {
-		fmt.Errorf("client: could not create request: %s\n", err)
-		return nil, err
-	}
-
 	req.Header.Set("Content-Type", "application/json")
-	if token != "" {
+
+	if {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 

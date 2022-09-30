@@ -1,9 +1,10 @@
 package main
 
 import (
-	"envholder/internal/cmd"
 	"fmt"
 	"os"
+
+	"github.com/breno-alves/envholder/internal/cmd"
 )
 
 func main() {

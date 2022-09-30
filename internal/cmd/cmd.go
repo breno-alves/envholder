@@ -1,29 +1,22 @@
 package cmd
 
 import (
-	"envholder/internal/api"
-	"envholder/pkg/config"
 	"fmt"
+	"log"
+
+	"github.com/breno-alves/envholder/pkg/ssm"
 	"github.com/spf13/cobra"
 )
 
 type CommandHandler struct {
 	root *cobra.Command
-	api  *api.Api
-}
-
-type Command interface {
-	Hello() *cobra.Command
-	Login() *cobra.Command
 }
 
 func NewCommandHandler() *CommandHandler {
 	cmdRoot := &CommandHandler{
 		root: &cobra.Command{},
-		api:  api.NewApi(),
 	}
-	cmdRoot.root.AddCommand(Login(cmdRoot))
-	cmdRoot.root.AddCommand(ListProjects(cmdRoot))
+	cmdRoot.root.AddCommand(Export(cmdRoot))
 
 	return cmdRoot
 }
@@ -31,40 +24,27 @@ func NewCommandHandler() *CommandHandler {
 func (ch *CommandHandler) Execute() error {
 	return ch.root.Execute()
 }
-func ListProjects(cmdRoot *CommandHandler) *cobra.Command {
-	return &cobra.Command{
-		Use:   "project [option]",
-		Short: "",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			configData, err := config.ReadConfig()
-			if err != nil {
-				fmt.Println("missing config file")
-				panic(err)
-			}
-			
-			_, err = cmdRoot.api.ListProjects(configData.AccessToken)
-			if err != nil {
-				panic(err)
-			}
-		},
-	}
-}
 
-func Login(cmdRoot *CommandHandler) *cobra.Command {
+func Export(cmdRoot *CommandHandler) *cobra.Command {
 	return &cobra.Command{
-		Use:   "login [username] [password]",
+		Use:   "export [exporter] [path]",
 		Short: "",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			response, err := cmdRoot.api.Login(args[0], args[1])
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("Login successful")
-			err = config.WriteConfig(response.AccessToken)
-			if err != nil {
-				panic(err)
+			exporter := args[0]
+			path := args[1]
+
+			switch exporter {
+			case "ssm":
+				exp := ssm.NewSSM(path)
+				variables, err := exp.ExportVariables(true)
+				if err != nil {
+					log.Fatal(err)
+				}
+				for idx := range variables {
+					output := fmt.Sprintf("%s=%s\n", variables[idx].Name, variables[idx].Value)
+					fmt.Println(output)
+				}
 			}
 		},
 	}
