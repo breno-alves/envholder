@@ -1,15 +1,12 @@
 package transformers
 
-type OutputVarible struct {
-	Name  string
-	Value string
+import "github.com/breno-alves/envholder/pkg/exporters"
+
+type Transfomer interface {
+	Transform(variable *exporters.Variable) string
 }
 
-type Outputer interface {
-	Transform(variable *OutputVarible) string
-}
-
-func NewOutputer(format string) Outputer {
+func NewTransformer(format string) Transfomer {
 	switch format {
 	case "dotenv":
 		return NewDotEnvOutput()

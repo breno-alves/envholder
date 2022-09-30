@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/breno-alves/envholder/pkg/ssm"
+	"github.com/breno-alves/envholder/pkg/exporters"
 	"github.com/breno-alves/envholder/pkg/transformers"
 	"github.com/spf13/cobra"
 )
@@ -34,23 +34,22 @@ func Export(cmdRoot *CommandHandler) *cobra.Command {
 		Long:  "",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			exporter := args[0]
+			export := args[0]
 			path := args[1]
 			format, _ := cmd.Flags().GetString("format")
-			transformer := transformers.NewOutputer(format)
 
-			switch exporter {
-			case "ssm":
-				exp := ssm.NewSSM(path)
-				variables, err := exp.ExportVariables(true)
-				if err != nil {
-					log.Fatal(err)
-				}
-				for idx := range variables {
-					variable := variables[idx]
-					output := transformer.Transform(variable)
-					fmt.Println(output)
-				}
+			transformer := transformers.NewTransformer(format)
+			exporter := exporters.NewExporter(export, path)
+
+			variables, err := exporter.Export()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			for idx := range variables {
+				variable := variables[idx]
+				output := transformer.Transform(variable)
+				fmt.Printf(output)
 			}
 		},
 	}
