@@ -1,6 +1,8 @@
 package ssm
 
 import (
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -25,8 +27,10 @@ func NewSSM(path string) *SSM {
 
 func (*SSM) ParseVariables(acc []*OutputVarible, output *ssm.GetParametersByPathOutput) ([]*OutputVarible, error) {
 	for _, p := range output.Parameters {
+		pathArr := strings.Split(*p.Name, "/")
+		name := pathArr[len(pathArr)-1]
 		acc = append(acc, &OutputVarible{
-			Name:  *p.Name,
+			Name:  name,
 			Value: *p.Value,
 		})
 	}
