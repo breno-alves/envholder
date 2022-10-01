@@ -2,16 +2,18 @@ package transformers
 
 import (
 	"fmt"
+
+	"github.com/breno-alves/envholder/pkg/exporters"
 )
 
-type DotenvOutput struct {
+type DotenvTransformer struct {
 }
 
-func NewDotEnvOutput() *DotenvOutput {
-	return &DotenvOutput{}
+func NewDotEnvOutput() *DotenvTransformer {
+	return &DotenvTransformer{}
 }
 
-func (*DotenvOutput) Transform(variable *OutputVarible) string {
+func (*DotenvTransformer) Transform(variable *exporters.Variable) string {
 	output := fmt.Sprintf("%s=%s\n", variable.Name, variable.Value)
 	return output
 }

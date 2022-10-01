@@ -1,4 +1,4 @@
-package ssm
+package exporters
 
 import (
 	"strings"
@@ -6,38 +6,43 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/breno-alves/envholder/pkg/transformers"
 )
 
-type SSM struct {
-	client *ssm.SSM
-	path   string
+type SSMOutput = *ssm.GetParametersByPathOutput
+
+type SSM[D SSMOutput] struct {
+	client    *ssm.SSM
+	Path      string
+	Recursive bool
 }
 
-func NewSSM(path string) *SSM {
-	return &SSM{
-		client: ssm.New(session.Must(session.NewSession())),
-		path:   path,
+func NewSSM(path string, recursive bool) Exporter[SSMOutput] {
+	return &SSM[SSMOutput]{
+		client:    ssm.New(session.Must(session.NewSession())),
+		Path:      path,
+		Recursive: recursive,
 	}
 }
 
-func (*SSM) ParseVariables(acc []*transformers.OutputVarible, ot *ssm.GetParametersByPathOutput) ([]*transformers.OutputVarible, error) {
-	for _, p := range ot.Parameters {
+func (instance *SSM[D]) Parse(acc []*Variable, ot D) ([]*Variable, error) {
+	for _, p := range (*ot).Parameters {
 		pathArr := strings.Split(*p.Name, "/")
 		name := pathArr[len(pathArr)-1]
-		acc = append(acc, &transformers.OutputVarible{
+		value := *p.Value
+		acc = append(acc, &Variable{
 			Name:  name,
-			Value: *p.Value,
+			Value: value,
 		})
 	}
 	return acc, nil
 }
 
-func (instance *SSM) ExportVariables(recursive bool) (acc []*transformers.OutputVarible, err error) {
+func (instance *SSM[D]) Export() ([]*Variable, error) {
+	acc := make([]*Variable, 0)
 	input := &ssm.GetParametersByPathInput{
-		Path:           aws.String(instance.path),
+		Path:           aws.String(instance.Path),
 		WithDecryption: aws.Bool(true),
-		Recursive:      aws.Bool(recursive),
+		Recursive:      aws.Bool(instance.Recursive),
 	}
 
 	output, err := instance.client.GetParametersByPath(input)
@@ -45,7 +50,7 @@ func (instance *SSM) ExportVariables(recursive bool) (acc []*transformers.Output
 		return nil, err
 	}
 
-	acc, err = instance.ParseVariables(acc, output)
+	acc, err = instance.Parse(acc, output)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +63,7 @@ func (instance *SSM) ExportVariables(recursive bool) (acc []*transformers.Output
 			return nil, err
 		}
 
-		acc, err = instance.ParseVariables(acc, output)
+		acc, err = instance.Parse(acc, output)
 		if err != nil {
 			return nil, err
 		}
